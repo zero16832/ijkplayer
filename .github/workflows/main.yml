@@ -103,7 +103,7 @@ jobs:
     - name: Build Sample
       working-directory: ijkplayer-android/android/ijkplayer
       run: |
-        ./gradlew wrapper --gradle-version=5.6.4
+        ./gradlew wrapper --gradle-version=7.2
         ./gradlew build
         
     - name: Upload IJKPlayer libraries
