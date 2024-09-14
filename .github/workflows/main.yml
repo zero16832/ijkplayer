@@ -55,6 +55,7 @@ jobs:
     - name: Configure environment
       run: |
         echo "PATH=$ANDROID_NDK_ROOT:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
+        echo "SHELL=/bin/bash" >> $GITHUB_ENV
       
     - name: Clone IJKPlayer
       run: git clone https://github.com/zero16832/ijkplayer.git ijkplayer-android
@@ -72,8 +73,8 @@ jobs:
       run: |
         export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
         export ANDROID_NDK=$ANDROID_NDK
-        ./compile-openssl.sh clean
-        ./compile-openssl.sh all
+        bash ./compile-openssl.sh clean
+        bash ./compile-openssl.sh all
         
     - name: Build FFmpeg
       if: ${{ !github.event.inputs.skip_long_steps }}
@@ -81,8 +82,8 @@ jobs:
       run: |
         export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
         export ANDROID_NDK=$ANDROID_NDK
-        ./compile-ffmpeg.sh clean
-        ./compile-ffmpeg.sh all
+        bash ./compile-ffmpeg.sh clean
+        bash ./compile-ffmpeg.sh all
         
     - name: Build IJKPlayer
       if: ${{ !github.event.inputs.skip_long_steps }}
@@ -91,7 +92,7 @@ jobs:
         export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
         export ANDROID_NDK=$ANDROID_NDK
         cd android
-        ./compile-ijk.sh all
+        bash ./compile-ijk.sh all
         
     - name: Build Sample
       working-directory: ijkplayer-android/android/ijkplayer
