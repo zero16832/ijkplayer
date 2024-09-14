@@ -1,10 +1,10 @@
-name: Build IJKPlayer for Android
+name: Build IJKPlayer
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -19,80 +19,70 @@ on:
         default: false
 
 env:
-  NDK_VERSION: r10e
   GRADLE_VERSION: 6.7.1
 
 jobs:
+
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
-    - name: Set up JDK 11
-      uses: actions/setup-java@v3
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v1
       with:
-        java-version: '11'
-        distribution: 'adopt'
+        java-version: 1.8
     
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git yasm build-essential curl unzip
+        sudo apt-get install -y git yasm make
     
     - name: Setup Android NDK
-      run: |
-        wget -q https://dl.google.com/android/repository/android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
-        unzip -q android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
-        rm android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
-        echo "ANDROID_NDK_ROOT=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
-        echo "ANDROID_NDK=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_PATH
-
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r10e
+    
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
       
     - name: Configure environment
       run: |
-        echo "PATH=$ANDROID_NDK_ROOT:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
-        echo "SHELL=/bin/bash" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_SDK_ROOT/platform-tools:$PATH" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
+        echo "ANDROID_NDK=$ANDROID_NDK_ROOT" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_NDK_ROOT:$PATH" >> $GITHUB_ENV
       
     - name: Clone IJKPlayer
-      run: git clone https://github.com/zero16832/ijkplayer.git ijkplayer-android
+      run: git clone https://github.com/Bilibili/ijkplayer.git ijkplayer-android
       
     - name: Initialize IJKPlayer
       if: ${{ !github.event.inputs.skip_long_steps }}
-      working-directory: ijkplayer-android
       run: |
+        cd ijkplayer-android
         ./init-android.sh
         ./init-android-openssl.sh
         
     - name: Build OpenSSL
       if: ${{ !github.event.inputs.skip_long_steps }}
-      working-directory: ijkplayer-android/android/contrib
       run: |
-        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
-        export ANDROID_NDK=$ANDROID_NDK
-        bash ./compile-openssl.sh clean
-        bash ./compile-openssl.sh all
+        cd ijkplayer-android/android/contrib
+        ./compile-openssl.sh clean
+        ./compile-openssl.sh all
         
     - name: Build FFmpeg
       if: ${{ !github.event.inputs.skip_long_steps }}
-      working-directory: ijkplayer-android/android/contrib
       run: |
-        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
-        export ANDROID_NDK=$ANDROID_NDK
-        bash ./compile-ffmpeg.sh clean
-        bash ./compile-ffmpeg.sh all
+        cd ijkplayer-android/android/contrib
+        ./compile-ffmpeg.sh clean
+        ./compile-ffmpeg.sh all
         
     - name: Build IJKPlayer
       if: ${{ !github.event.inputs.skip_long_steps }}
-      working-directory: ijkplayer-android
       run: |
-        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
-        export ANDROID_NDK=$ANDROID_NDK
-        cd android
-        bash ./compile-ijk.sh all
+        cd ijkplayer-android/android
+        ./compile-ijk.sh all
         
     - name: Update Gradle Wrapper
       working-directory: ijkplayer-android/android/ijkplayer
@@ -115,18 +105,16 @@ jobs:
       run: |
         chmod +x ./gradlew
         ./gradlew build
-        
-    - name: Upload IJKPlayer libraries
-      if: ${{ !github.event.inputs.skip_long_steps }}
-      uses: actions/upload-artifact@v3
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
       with:
-        name: ijkplayer-android-libs
-        path: ijkplayer-android/android/ijkplayer/ijkplayer-*/build/outputs/aar/*.aar
-        if-no-files-found: error
+        name: ijkplayer-android
+        path: ijkplayer-android/android/ijkplayer
 
     - name: Upload Sample APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: ijkplayer-sample-apk
         path: ijkplayer-android/android/ijkplayer/ijkplayer-example/build/outputs/apk/debug/ijkplayer-example-debug.apk
-        if-no-files-found: error
+        if-no-files-found: warn
