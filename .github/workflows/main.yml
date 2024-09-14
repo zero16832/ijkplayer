@@ -63,23 +63,23 @@ jobs:
         echo "PATH=$ANDROID_NDK_ROOT:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
         echo "SHELL=/bin/bash" >> $GITHUB_ENV
         
-    - name: Check SDK directory
-      run: |
-        ls -R $ANDROID_HOME
-
     - name: Install SDK components and accept licenses
       run: |
-        echo "Checking for sdkmanager in different locations"
+        # 检查 sdkmanager 的位置
         if [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
         elif [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
           SDKMANAGER="$ANDROID_HOME/tools/bin/sdkmanager"
         else
-          echo "sdkmanager not found"
-          exit 1
+          echo "sdkmanager not found, installing cmdline-tools"
+          wget https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip
+          unzip commandlinetools-linux-6858069_latest.zip -d $ANDROID_HOME
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+          mv $ANDROID_HOME/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
         fi
-        echo "Using sdkmanager at $SDKMANAGER"
-        
+    
+        # 使用 sdkmanager 安装组件和接受许可
         $SDKMANAGER --update
         yes | $SDKMANAGER --licenses
         $SDKMANAGER "platform-tools" "build-tools;28.0.3" "platforms;android-25"
