@@ -2,9 +2,9 @@ name: Build IJKPlayer for Android
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -20,6 +20,7 @@ on:
 
 env:
   NDK_VERSION: r10e
+  GRADLE_VERSION: 6.7.1
 
 jobs:
   build:
@@ -46,8 +47,7 @@ jobs:
         unzip -q android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
         rm android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
         echo "ANDROID_NDK_ROOT=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
-        echo "ANDROID_NDK=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
-        echo "$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_PATH
+        echo "ANDROID_NDK=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_PATH
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
@@ -94,10 +94,26 @@ jobs:
         cd android
         bash ./compile-ijk.sh all
         
+    - name: Update Gradle Wrapper
+      working-directory: ijkplayer-android/android/ijkplayer
+      run: |
+        wget https://services.gradle.org/distributions/gradle-${{ env.GRADLE_VERSION }}-bin.zip
+        unzip -d /opt/gradle gradle-${{ env.GRADLE_VERSION }}-bin.zip
+        echo "GRADLE_HOME=/opt/gradle/gradle-${{ env.GRADLE_VERSION }}" >> $GITHUB_ENV
+        echo "/opt/gradle/gradle-${{ env.GRADLE_VERSION }}/bin" >> $GITHUB_PATH
+        gradle wrapper --gradle-version ${{ env.GRADLE_VERSION }}
+
+    - name: Update build.gradle files
+      working-directory: ijkplayer-android/android/ijkplayer
+      run: |
+        sed -i 's/com\.android\.tools\.build:gradle:1\.2\.3/com.android.tools.build:gradle:3.6.4/' build.gradle
+        sed -i 's/com\.github\.dcendents:android-maven-plugin:1\.2/com.github.dcendents:android-maven-gradle-plugin:2.1/' build.gradle
+        sed -i 's/classpath "com\.jfrog\.bintray\.gradle:gradle-bintray-plugin:1\.7\.3"//' build.gradle
+
     - name: Build Sample
       working-directory: ijkplayer-android/android/ijkplayer
       run: |
-        ./gradlew wrapper --gradle-version=6.7.1
+        chmod +x ./gradlew
         ./gradlew build
         
     - name: Upload IJKPlayer libraries
