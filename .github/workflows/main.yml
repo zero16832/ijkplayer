@@ -1,92 +1,72 @@
-name: Build ijkplayer
+name: Build IJKPlayer
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
+
+  build:
+    runs-on: ubuntu-18.04
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
+    
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v1
       with:
-        fetch-depth: 0
-    
-    - name: Set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: '11'
-        distribution: 'adopt'
-    
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v2
-    
-    - name: Set up NDK r10e
-      run: |
-        wget https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip
-        unzip -q android-ndk-r10e-linux-x86_64.zip
-        echo "ANDROID_NDK_ROOT=$PWD/android-ndk-r10e" >> $GITHUB_ENV
-        echo "ANDROID_NDK=$PWD/android-ndk-r10e" >> $GITHUB_ENV
-        echo "PATH=$PWD/android-ndk-r10e:$PATH" >> $GITHUB_ENV
+        java-version: 1.8
     
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y yasm
+        sudo apt-get install -y git yasm make
     
-    - name: Initialize Android build
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r10e
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Configure environment
       run: |
+        echo "export PATH=$ANDROID_SDK_ROOT/platform-tools:$PATH" >> $GITHUB_ENV
+        echo "export PATH=$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
+        echo "export ANDROID_NDK=$ANDROID_NDK_ROOT" >> $GITHUB_ENV
+        echo "export PATH=$ANDROID_NDK_ROOT:$PATH" >> $GITHUB_ENV
+      
+    - name: Clone IJKPlayer
+      run: git clone https://github.com/Bilibili/ijkplayer.git ijkplayer-android
+      
+    - name: Initialize IJKPlayer
+      run: |
+        cd ijkplayer-android
         ./init-android.sh
-    
-    - name: Compile FFmpeg
+        ./init-android-openssl.sh
+        
+    - name: Build OpenSSL
       run: |
-        cd android/contrib
-        bash ./compile-ffmpeg.sh clean
-        bash ./compile-ffmpeg.sh all
-    
-    - name: Compile ijkplayer
+        cd ijkplayer-android/android/contrib
+        ./compile-openssl.sh clean
+        ./compile-openssl.sh all
+        
+    - name: Build FFmpeg
       run: |
-        cd android
-        bash ./compile-ijk.sh all
-    
-    - name: Upload Android artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ijkplayer-android
-        path: android/ijkplayer/
-
-  build-ios:
-    runs-on: macos-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    
-    - name: Install dependencies
-      run: |
-        brew install yasm
-    
-    - name: Initialize iOS build
-      run: |
-        ./init-ios.sh
-    
-    - name: Compile FFmpeg
-      run: |
-        cd ios
+        cd ijkplayer-android/android/contrib
         ./compile-ffmpeg.sh clean
         ./compile-ffmpeg.sh all
-    
-    - name: Build iOS demo
+        
+    - name: Build IJKPlayer
       run: |
-        cd ios/IJKMediaDemo
-        xcodebuild -project IJKMediaDemo.xcodeproj -scheme IJKMediaDemo -sdk iphonesimulator -configuration Release
-    
-    - name: Upload iOS artifacts
-      uses: actions/upload-artifact@v4
+        cd ijkplayer-android/android
+        ./compile-ijk.sh all
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
       with:
-        name: ijkplayer-ios
-        path: ios/IJKMediaDemo/build/
+        name: ijkplayer-android
+        path: ijkplayer-android/android/ijkplayer
