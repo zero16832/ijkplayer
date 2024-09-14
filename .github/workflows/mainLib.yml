@@ -1,4 +1,4 @@
-name: Build IJKPlayer for Android
+name: Build IJKPlayer Lib
 
 on:
   push:
