@@ -1,0 +1,89 @@
+name: Build ijkplayer
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - name: Set up NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r10e
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y yasm
+    
+    - name: Initialize Android build
+      run: |
+        ./init-android.sh
+    
+    - name: Compile FFmpeg
+      run: |
+        cd android/contrib
+        ./compile-ffmpeg.sh clean
+        ./compile-ffmpeg.sh all
+    
+    - name: Compile ijkplayer
+      run: |
+        cd android
+        ./compile-ijk.sh all
+    
+    - name: Upload Android artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ijkplayer-android
+        path: android/ijkplayer/
+
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    
+    - name: Install dependencies
+      run: |
+        brew install yasm
+    
+    - name: Initialize iOS build
+      run: |
+        ./init-ios.sh
+    
+    - name: Compile FFmpeg
+      run: |
+        cd ios
+        ./compile-ffmpeg.sh clean
+        ./compile-ffmpeg.sh all
+    
+    - name: Build iOS demo
+      run: |
+        cd ios/IJKMediaDemo
+        xcodebuild -project IJKMediaDemo.xcodeproj -scheme IJKMediaDemo -sdk iphonesimulator -configuration Release
+    
+    - name: Upload iOS artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ijkplayer-ios
+        path: ios/IJKMediaDemo/build/
