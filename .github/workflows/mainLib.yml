@@ -1,0 +1,109 @@
+name: Build IJKPlayer for Android
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with debug logging'
+        required: false
+        default: false
+      skip_long_steps:
+        type: boolean
+        description: 'Skip time-consuming steps for faster debugging'
+        required: false
+        default: false
+
+env:
+  NDK_VERSION: r10e
+  ANDROID_SDK_VERSION: r24.4.1
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v3
+      with:
+        java-version: '8'
+        distribution: 'adopt'
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git yasm build-essential curl unzip
+    
+    - name: Setup Android NDK
+      run: |
+        wget -q https://dl.google.com/android/repository/android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
+        unzip -q android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
+        rm android-ndk-${{ env.NDK_VERSION }}-linux-x86_64.zip
+        echo "ANDROID_NDK_ROOT=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+        echo "ANDROID_NDK=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+        echo "$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_PATH
+
+    - name: Setup Android SDK
+      run: |
+        wget -q https://dl.google.com/android/repository/tools_${{ env.ANDROID_SDK_VERSION }}-linux.zip
+        unzip -q tools_${{ env.ANDROID_SDK_VERSION }}-linux.zip -d android-sdk
+        echo "ANDROID_HOME=$PWD/android-sdk" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$PWD/android-sdk" >> $GITHUB_ENV
+        echo "$PWD/android-sdk/tools/bin" >> $GITHUB_PATH
+      
+    - name: Configure environment
+      run: |
+        echo "PATH=$ANDROID_NDK_ROOT:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$PATH" >> $GITHUB_ENV
+        echo "SHELL=/bin/bash" >> $GITHUB_ENV
+      
+    - name: Clone IJKPlayer
+      run: git clone -b master https://github.com/zero16832/ijkplayer.git ijkplayer-android
+      
+    - name: Initialize IJKPlayer
+      if: ${{ !github.event.inputs.skip_long_steps }}
+      working-directory: ijkplayer-android
+      run: |
+        ./init-android.sh
+        ./init-android-openssl.sh
+        
+    - name: Build OpenSSL
+      if: ${{ !github.event.inputs.skip_long_steps }}
+      working-directory: ijkplayer-android/android/contrib
+      run: |
+        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+        export ANDROID_NDK=$ANDROID_NDK
+        bash ./compile-openssl.sh clean
+        bash ./compile-openssl.sh all
+        
+    - name: Build FFmpeg
+      if: ${{ !github.event.inputs.skip_long_steps }}
+      working-directory: ijkplayer-android/android/contrib
+      run: |
+        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+        export ANDROID_NDK=$ANDROID_NDK
+        bash ./compile-ffmpeg.sh clean
+        bash ./compile-ffmpeg.sh all
+        
+    - name: Build IJKPlayer
+      if: ${{ !github.event.inputs.skip_long_steps }}
+      working-directory: ijkplayer-android
+      run: |
+        export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+        export ANDROID_NDK=$ANDROID_NDK
+        cd android
+        bash ./compile-ijk.sh all 
+        
+    - name: Upload IJKPlayer libraries
+      if: ${{ !github.event.inputs.skip_long_steps }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ijkplayer-android-libs
+        path: ijkplayer-android/android/ijkplayer/ijkplayer-*/build/outputs/aar/*.aar
+        if-no-files-found: error
