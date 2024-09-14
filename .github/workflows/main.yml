@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  NDK_VERSION: r14b
+  NDK_VERSION: r10e
 
 jobs:
   build:
