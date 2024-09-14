@@ -107,13 +107,13 @@ jobs:
         ./gradlew build
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ijkplayer-android
         path: ijkplayer-android/android/ijkplayer
 
     - name: Upload Sample APK
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ijkplayer-sample-apk
         path: ijkplayer-android/android/ijkplayer/ijkplayer-example/build/outputs/apk/debug/ijkplayer-example-debug.apk
