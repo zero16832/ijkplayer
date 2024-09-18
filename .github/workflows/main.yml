@@ -161,7 +161,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./ijkplayer-android/android/ijkplayer/ijkplayer-*/build/outputs/aar/ijkplayer-*.aar
+        asset_path: ./ijkplayer-android/android/ijkplayer/ijkplayer-*/build/outputs/aar/*.aar
         asset_name: ijkplayer-android-libs.aar
         asset_content_type: application/zip
 
