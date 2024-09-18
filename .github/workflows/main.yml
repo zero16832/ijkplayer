@@ -141,5 +141,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ijkplayer-sample-apk
-        path: ijkplayer-android/android/ijkplayer/ijkplayer-example/build/outputs/apk/debug/ijkplayer-example-debug.apk
+        path: ijkplayer-android/android/ijkplayer/ijkplayer-example/build/outputs/apk/all32/debug/ijkplayer-example-all32-debug.apk
         if-no-files-found: error
